@@ -19,8 +19,8 @@
 
 ## Questions
 
-- What is meant by testing routines?
-- Does it matter which 10 years we choose for the initial database?
+- What is meant by testing routines? -> pytest simple unit tests
+- Does it matter which 10 years we choose for the initial database? -> 
 - how should we handle missing time?
 
 ## General project infos
