@@ -114,3 +114,10 @@ volumes:
 
 ## 3. Creation of Station Models in the Database
 
+To create the model we added a Station class to the ./nceiDatabase/database/models.py file.
+For most of the attributes we added CharFields with an appropriate max_length parameter. For longitude, latitude and
+elevation we used DecimalFields as they are encoded with a fixed amount of decimal places.
+
+After creating the model we used the commands `docker-compose exec web python manage.py makemigrations` to create a
+migration and `docker-compose exec web python manage.py migrat` to apply the migration to our database.
+
