@@ -111,6 +111,8 @@ volumes:
 - we can then use `docker-compose up --build` to initially build the services and container.
 - using the command `docker-compose exec web python manage.py migrate` we then tell django to create the migrations that
   create the initial postgreSQL tables in the database.
+- using the `docker-compose exec web python manage.py createsuperuser` you can then create a new user for the database
+  which allos you to acces the admin panel of django
 
 ## 3. Creation of Station Models in the Database
 
