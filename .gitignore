@@ -6,6 +6,7 @@
 /data/weather/*.csv.gz
 /data/weather/*.txt
 /data/*.txt
+/data
 
 .venv
 
