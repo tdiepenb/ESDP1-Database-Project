@@ -5,13 +5,13 @@ FROM python:3.9-slim
 WORKDIR /code
 
 # Copy the requirements file into the container
-COPY requirements.txt /code/
+COPY ../nceiDatabase/requirements.txt /code/
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the working directory contents into the container at /code/
-COPY . /code/
+COPY ../nceiDatabase /code/
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
