@@ -13,7 +13,7 @@ services:
       - "5432:5432" # Expose PostgreSQL port to the host
 
   web:
-    build: ../nceiDatabase
+    build: ../nceiDatabaseConnector/nceiDatabasePackage
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code

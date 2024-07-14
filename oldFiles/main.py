@@ -1,15 +1,7 @@
-import sys
 import numpy as np
-import pandas as pd
-from ftplib import FTP
-import requests   # more convenient for http(s) urls
-import numpy as np
-import os
-from import_export_data import download_years
 
 from import_export_data import download_years
 from import_export_data import export_downloaded_years
-from database_handling import create_connection
 from database_handling import create_table
 from database_handling import insert_copy
 
