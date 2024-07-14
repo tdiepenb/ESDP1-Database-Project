@@ -13,34 +13,28 @@ class NCEIDatabaseManager:
         self.db_password = db_password
         self.db_host = db_host
         self.db_port = db_port
-        self.connection = None
-        self.cursor = None
-        self.connect_to_db()
 
     def connect_to_db(self):
         try:
-            self.connection = psycopg2.connect(
+            connection = psycopg2.connect(
                 dbname=self.db_name,
                 user=self.db_user,
                 password=self.db_password,
                 host=self.db_host,
                 port=self.db_port
             )
-            self.cursor = self.connection.cursor()
+            cursor = connection.cursor()
             print(f"Connected to database {self.db_name} with user {self.db_user}")
+            return connection, cursor
         except Exception as error:
             print(f"Error: {error}")
-
-    def close_connection(self):
-        if self.cursor:
-            self.cursor.close()
-        if self.connection:
-            self.connection.close()
-        print("Database connection closed.")
 
     def insert_copy(self, file_path="", table_name="", columns=None):
         if columns is None:
             columns = []
+
+        connection, cursor = self.connect_to_db()
+
         try:
             copy_command = sql.SQL("""
                 COPY {table} ({columns}) FROM STDIN WITH CSV HEADER
@@ -50,19 +44,27 @@ class NCEIDatabaseManager:
             )
             print(f"Copying file {file_path} to database {table_name}")
             with open(file_path, 'r') as file:
-                self.cursor.copy_expert(copy_command, file)
-            self.connection.commit()
+                cursor.copy_expert(copy_command, file)
+            connection.commit()
             print(f"Insert with copy of file {file_path} to table: {table_name} done.")
-            self.cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
-            row_count = self.cursor.fetchone()[0]
+            cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+            row_count = cursor.fetchone()[0]
             print(f"Row count after insertion in table {table_name}: {row_count}")
         except Exception as error:
             print(f"Error: {error}")
-            if self.connection:
-                self.connection.rollback()
+            if connection:
+                connection.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            print(f"Disconnected")
 
     def create_stations_table(self):
         name = "Station"
+        connection, cursor = self.connect_to_db()
+
         try:
             table_name = sql.Identifier(name)
             columns = [
@@ -99,17 +101,26 @@ class NCEIDatabaseManager:
                 hcn_crn_flag=columns[7], hcn_crn_flag_type=column_types[7],
                 wmo_id=columns[8], wmo_id_type=column_types[8]
             )
-            self.cursor.execute(create_table_command)
-            self.connection.commit()
+            cursor.execute(create_table_command)
+            connection.commit()
             print(f"{name} table created.")
         except Exception as error:
             print(f"Error: {error}")
-            if self.connection:
-                self.connection.rollback()
+            if connection:
+                connection.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            print(f"Disconnected")
 
     def create_climate_table(self, year):
         table_name = f"Climate{year}"
         station_table = "Station"
+
+        connection, cursor = self.connect_to_db()
+
         try:
             create_table_command = sql.SQL('''
                 CREATE TABLE IF NOT EXISTS {table} (
@@ -127,38 +138,61 @@ class NCEIDatabaseManager:
                 table=sql.Identifier(table_name),
                 station_table=sql.Identifier(station_table),
             )
-            self.cursor.execute(create_table_command)
-            self.connection.commit()
+            cursor.execute(create_table_command)
+            connection.commit()
             print(f"Table {table_name} created successfully.")
         except Exception as error:
             print(f"Error: {error}")
-            if self.connection:
-                self.connection.rollback()
+            if connection:
+                connection.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            print(f"Disconnected")
+
         return table_name
 
     def drop_table(self, table_name):
+        connection, cursor = self.connect_to_db()
+
         try:
             drop_table_command = sql.SQL("DROP TABLE IF EXISTS {table}").format(table=sql.Identifier(table_name))
-            self.cursor.execute(drop_table_command)
-            self.connection.commit()
+            cursor.execute(drop_table_command)
+            connection.commit()
             print(f"Table {table_name} dropped successfully.")
         except Exception as error:
             print(f"Error: {error}")
-            if self.connection:
-                self.connection.rollback()
+            if connection:
+                connection.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            print(f"Disconnected")
 
     def count_rows(self, table_name):
+        connection, cursor = self.connect_to_db()
+
         try:
             count_command = sql.SQL('SELECT COUNT(*) FROM {table}').format(
                 table=sql.Identifier(table_name)
             )
-            self.cursor.execute(count_command)
-            row_count = self.cursor.fetchone()[0]
+            cursor.execute(count_command)
+            row_count = cursor.fetchone()[0]
             print(f"The table {table_name} contains {row_count} rows.")
         except Exception as error:
             print(f"Error: {error}")
-            if self.connection:
-                self.connection.rollback()
+            if connection:
+                connection.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            print(f"Disconnected")
 
     def split_csv_file(self, file_path, num_chunks):
 
@@ -191,6 +225,8 @@ class NCEIDatabaseManager:
                     chunk_number += 1
             # Write remaining lines to the last chunk
             if chunk_lines:
+                print(
+                    f"Writing chunk {chunk_number} file to {file_base}_chunk{chunk_number}{file_ext} with size {len(chunk_lines)}")
                 chunk_file_path = f"{file_base}_chunk{chunk_number}{file_ext}"
                 with open(chunk_file_path, 'w') as chunk_file:
                     chunk_file.write(header)
@@ -208,14 +244,7 @@ class NCEIDatabaseManager:
             # we can't use the standard connection here since each thread needs its own connection
             print(f'Thread started for chunk: {chunk_file}')
             try:
-                conn = psycopg2.connect(
-                    dbname=self.db_name,
-                    user=self.db_user,
-                    password=self.db_password,
-                    host=self.db_host,
-                    port=self.db_port
-                )
-                cur = conn.cursor()
+                connection, cursor = self.connect_to_db()
                 copy_command = sql.SQL("""
                     COPY {table} ({columns}) FROM STDIN WITH CSV HEADER
                 """).format(
@@ -225,16 +254,19 @@ class NCEIDatabaseManager:
 
                 with open(chunk_file, 'r') as chunk:
                     # this adds the chunk to the database using copy statement
-                    cur.copy_expert(copy_command, chunk)
-                conn.commit()
+                    cursor.copy_expert(copy_command, chunk)
+                connection.commit()
                 print(f'Thread for chunk {chunk_file} completed.')
             except Exception as error:
                 print(f"Error in thread: {error}")
-                if conn:
-                    conn.rollback()
+                if connection:
+                    connection.rollback()
             finally:
-                cur.close()
-                conn.close()
+                if cursor:
+                    cursor.close()
+                if connection:
+                    connection.close()
+                # this removes the chunk file after we are finished with it
                 os.remove(chunk_file)
 
         with ThreadPoolExecutor(max_workers=num_threads) as executor:
