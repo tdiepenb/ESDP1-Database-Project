@@ -7,14 +7,31 @@ import numpy as np
 
 class NCEIDatabaseManager:
     def __init__(self, db_name="mydatabase", db_user="myuser", db_password="mypassword", db_host="localhost",
-                 db_port="5432"):
+                 db_port="5432",
+                 weather_cols=None, station_cols=None):
+
+        if weather_cols is None:
+            weather_cols = ["id", "stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
+        if station_cols is None:
+            station_cols = ["id", "latitude", "longitude", "elevation", "state", "name", "gsn_flag", "hcn_crn_flag",
+                            "wmo_id"]
+
         self.db_name = db_name
         self.db_user = db_user
         self.db_password = db_password
         self.db_host = db_host
         self.db_port = db_port
+        self.weather_cols = weather_cols
+        self.station_cols = station_cols
+
+        self.create_stations_table()
 
     def connect_to_db(self):
+        """
+        This creates a connection to the database. It then returns the connection and the cursor.
+
+        :return: a connection and cursor for the database
+        """
         try:
             connection = psycopg2.connect(
                 dbname=self.db_name,
@@ -62,6 +79,11 @@ class NCEIDatabaseManager:
             print(f"Disconnected")
 
     def create_stations_table(self):
+        """
+        This creates a station table with name "Station" in the database
+
+        :return:
+        """
         name = "Station"
         connection, cursor = self.connect_to_db()
 
@@ -116,6 +138,12 @@ class NCEIDatabaseManager:
             print(f"Disconnected")
 
     def create_climate_table(self, year):
+        """
+        This creates a table for the specified year with the name Climate{year}
+
+        :param year: the year for which to create the table
+        :return:
+        """
         table_name = f"Climate{year}"
         station_table = "Station"
 
@@ -155,6 +183,12 @@ class NCEIDatabaseManager:
         return table_name
 
     def drop_table(self, table_name):
+        """
+        This drops a specified table from the database
+
+        :param table_name: the table to drop
+        :return:
+        """
         connection, cursor = self.connect_to_db()
 
         try:
@@ -174,6 +208,12 @@ class NCEIDatabaseManager:
             print(f"Disconnected")
 
     def count_rows(self, table_name):
+        """
+        This counts the number of rows in a specified table.
+
+        :param table_name: The table to be checked
+        :return:
+        """
         connection, cursor = self.connect_to_db()
 
         try:
@@ -195,6 +235,13 @@ class NCEIDatabaseManager:
             print(f"Disconnected")
 
     def split_csv_file(self, file_path, num_chunks):
+        """
+        This splits a file into a specified number of chunks. Each chunk has the same size
+
+        :param file_path: The Path to the file to be split
+        :param num_chunks: the number of chunks
+        :return: returns an array of file paths to the chunks
+        """
 
         with open(file_path, 'r') as file:
             header = file.readline()
@@ -233,15 +280,32 @@ class NCEIDatabaseManager:
                     chunk_file.writelines(chunk_lines)
         return [f"{file_base}_chunk{chunk_number}{file_ext}" for chunk_number in range(chunk_number + 1)]
 
-    def multi_threaded_insert(self, file_path, table_name, columns=None, num_threads=4):
+    def multi_threaded_insert(self, file_path, table_name=None, columns=None, num_threads=4):
+        """
+        This is a multi_threaded insert function. It Takes a file as input, and splits it into a number of chunks
+        specified by num_threads. It then starts a thread for each chunk and inserts the data into the specified table.
+        When a thread finishes it also deletes the chunk file.
+
+        :param file_path: path to the file to be inserted
+        :param table_name: name of the table to be inserted into
+        :param columns: the columns of the table
+        :param num_threads: number of chunks and threads to use
+        :return:
+        """
         if columns is None:
             columns = []
 
-        # this splits the file into equal sized chunks. That way one thread shouldn't finish that much earlier than an other and we use resources efficently
+        if table_name is None:
+            print(f"Error: table_name must be provided")
+            return
+
+        # this splits the file into equal sized chunks. That way one thread shouldn't finish that much earlier
+        # than another, and we use resources efficiently
         chunks = self.split_csv_file(file_path, num_threads)
 
         def insert_chunk(chunk_file):
-            # we can't use the standard connection here since each thread needs its own connection
+            # we use a specifically defined method so that it deletes the chunk
+            # file at the end to clean up the data folder
             print(f'Thread started for chunk: {chunk_file}')
             try:
                 connection, cursor = self.connect_to_db()
@@ -279,3 +343,5 @@ class NCEIDatabaseManager:
 
         self.count_rows(table_name)
         print(f"Multi-threaded insert completed for {table_name}.")
+
+        return
