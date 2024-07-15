@@ -1,30 +1,16 @@
 version: "3.8"
 
 services:
-  mysql:
-    container_name: mysql
-    image: mysql:8.0
-    ports:
-      - "${MYSQL_PORT}:3306"
-    restart: always
-    environment:
-      MYSQL_ROOT_USER: root
-      MYSQL_ROOT_PASSWORD: SoSe2425
-      # MYSQL_DATABASE: homestead
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: SoSe2425
-      TZ: Europe/Berlin
+  db:
+    image: postgres:13
     volumes:
-      - "${VOLUMES}/mysql:/var/lib/mysql"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "10"
-    networks:
-      - esdp
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "5432:5432" # Expose PostgreSQL port to the host
 
-networks:
-  esdp:
-    name: esdp
-    driver: bridge
+volumes:
+  postgres_data:
