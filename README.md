@@ -9,8 +9,6 @@ command.
 
 ## How to check the databases
 
-docker exec -it esdp-db-1 bash
-
-psql -U myuser -d mydatabase -h localhost
-
-SELECT COUNT(\*) FROM Climate1952;
+<code>docker exec -it esdp1-database-project-db-1 bash</code>
+<code>psql -U ESDP -d NCEIDatabase -h localhost</code>
+<code>SELECT COUNT(\*) FROM Climate1952;</code>
