@@ -2,26 +2,29 @@
 
 ## Project Overview
 
-This project aims to transform daily climate summaries into a fully operational database system using PostgreSQL. It includes functionalities for downloading data, ingesting it into the database, managing station information, performing data analysis, and optionally, creating a web service for data visualization.
+This project aims to transform daily climate summaries into a fully operational database system using PostgreSQL. It
+includes functionalities for downloading data, ingesting it into the database, managing station information, performing
+data analysis, and optionally, creating a web service for data visualization.
 
 ## Project Goals
 
 1. **Data Acquisition and Ingestion:** [✔]
 
-   - Download daily climate summaries for at least 10 years and load them into a PostgreSQL database.
-   - Automate data download and ingestion processes.
+    - Download daily climate summaries for at least 10 years and load them into a PostgreSQL database.
+    - Automate data download and ingestion processes.
 
 2. **Database Structure:** [✔]
 
-   - Define the database schema to store climate data and station metadata efficiently.
+    - Define the database schema to store climate data and station metadata efficiently.
 
 3. **Functionality:** [✔]
 
-   - Develop Python functions to query the database based on user-specified station and parameters.
-   - Implement basic data analysis capabilities such as plotting graphs based on user inputs.
+    - Develop Python functions to query the database based on user-specified station and parameters.
+    - Implement basic data analysis capabilities such as plotting graphs based on user inputs.
 
 4. **Optional Web Service:** [✖]
-   - Create a web-based frontend to interact with the database, allowing users to select stations and parameters and visualize data.
+    - Create a web-based frontend to interact with the database, allowing users to select stations and parameters and
+      visualize data.
 
 ## Implementation Details
 
@@ -29,6 +32,7 @@ This project aims to transform daily climate summaries into a fully operational 
 
 - Utilize Docker for setting up the PostgreSQL database.
 - Advantages of Docker include easy deployment, isolation of dependencies, and scalability.
+- You can download Docker from here: https://www.docker.com/
 
 ### Project Modules
 
@@ -36,15 +40,15 @@ This project aims to transform daily climate summaries into a fully operational 
 
 - **Description:** Contains functions to manage interactions with the PostgreSQL database.
 - **Features:**
-  - Modular execution of database operations.
-  - Database connection handling and query execution.
+    - Modular execution of database operations.
+    - Database connection handling and query execution.
 
 #### nceiDataManager
 
 - **Description:** Handles data management tasks such as downloading, filtering, and exporting climate data.
 - **Features:**
-  - Automated data download with requests api.
-  - Data filtering based on predefined criteria.
+    - Automated data download with requests api.
+    - Data filtering based on predefined criteria.
 
 ## Database Operations
 

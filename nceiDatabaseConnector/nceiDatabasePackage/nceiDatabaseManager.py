@@ -9,7 +9,7 @@ import pandas as pd
 class NCEIDatabaseManager:
     def __init__(self, db_name="mydatabase", db_user="myuser", db_password="mypassword", db_host="localhost",
                  db_port="5432",
-                 weather_cols=None, station_cols=None, debug_messages = False):
+                 weather_cols=None, station_cols=None, debug_messages=False):
 
         if weather_cols is None:
             weather_cols = ["id", "stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
@@ -187,7 +187,7 @@ class NCEIDatabaseManager:
                 print(f"Disconnected")
 
         return table_name
-    
+
     def create_climate_tables(self, years=None):
         """
         This creates a table for the specified year with the name Climate{year}
@@ -195,9 +195,9 @@ class NCEIDatabaseManager:
         :param year: the year for which to create the table
         :return:
         """
-        for year in years: 
+        for year in years:
             self.create_climate_table(year)
-            
+
         return True
 
     def drop_table(self, table_name):
@@ -319,7 +319,7 @@ class NCEIDatabaseManager:
         if table_name is None:
             print(f"Error: table_name must be provided")
             return
-        
+
         if self.count_rows(table_name=table_name) > 1:
             print(f"Data in table {table_name} already exists. Please check or delete the database before continuing.")
             return
@@ -371,7 +371,6 @@ class NCEIDatabaseManager:
         print(f"Multi-threaded insert completed for {table_name}.")
 
         return
-    
 
     ###########################################################################
     # DATA CHECK 
@@ -390,8 +389,7 @@ class NCEIDatabaseManager:
         # else:
         #     return False
         return True
-        
-    
+
     def is_year_in_db(self, year):
         """
         Checks if there is data in the database for the specified year.
@@ -400,7 +398,7 @@ class NCEIDatabaseManager:
         :return: True if there is data in the database for the year; False otherwise.
         """
         connection, cursor = self.connect_to_db()
-        
+
         try:
             table_name = f'Climate{year}'
 
@@ -411,12 +409,12 @@ class NCEIDatabaseManager:
             ''').format(
                 table=sql.Identifier(table_name),
             )
-            
+
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
-            return len(result)>0
+            return len(result) > 0
 
         except Exception as error:
             return False
@@ -445,7 +443,6 @@ class NCEIDatabaseManager:
                 print(f"Year {year} not in db and/or is not valid.")
             return False
 
-
     ###########################################################################
     # GET DATA 
     ###########################################################################
@@ -472,7 +469,7 @@ class NCEIDatabaseManager:
         """
         # connect to database
         connection, cursor = self.connect_to_db()
-        
+
         try:
             table_name = f'Station'
 
@@ -489,13 +486,13 @@ class NCEIDatabaseManager:
 
             if self.debug_messages:
                 print(command.as_string(cursor.connection))
-            
+
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
             data = pd.DataFrame(result, columns=columns)
-                
+
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
@@ -516,7 +513,7 @@ class NCEIDatabaseManager:
                 return data
             else:
                 return pd.DataFrame(columns=columns)
-            
+
     def get_station_data(self, columns):
         """
         Retrieves all rows from the 'Station' table.
@@ -538,7 +535,7 @@ class NCEIDatabaseManager:
         """
         # connect to database
         connection, cursor = self.connect_to_db()
-        
+
         try:
             table_name = f'Station'
 
@@ -553,13 +550,13 @@ class NCEIDatabaseManager:
 
             if self.debug_messages:
                 print(command.as_string(cursor.connection))
-            
+
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
             data = pd.DataFrame(result, columns=columns)
-                
+
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
@@ -582,7 +579,7 @@ class NCEIDatabaseManager:
                 return data
             else:
                 return pd.DataFrame(columns=columns)
-            
+
     def get_data_by_station_param(self, years, station, parameters):
         """
         Retrieves data from the SQL database for the specified years, station, and parameters.
@@ -606,12 +603,12 @@ class NCEIDatabaseManager:
         """
         # connect to database
         connection, cursor = self.connect_to_db()
-        
+
         try:
             data = pd.DataFrame()
-            for year in years: 
+            for year in years:
                 table_name = f'Climate{year}'
-                
+
                 parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
 
                 # Construct the COUNT query using psycopg2.sql
@@ -631,7 +628,7 @@ class NCEIDatabaseManager:
 
                 if self.debug_messages:
                     print(command.as_string(cursor.connection))
-                
+
                 # Execute the SELECT query
                 cursor.execute(command)
                 result = cursor.fetchall()
@@ -639,7 +636,7 @@ class NCEIDatabaseManager:
                 result_data = pd.DataFrame(result, columns=self.weather_cols)
 
                 data = pd.concat([data, result_data])
-                
+
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
@@ -660,9 +657,7 @@ class NCEIDatabaseManager:
                 return data
             else:
                 return pd.DataFrame(columns=self.weather_cols)
-    
-    
-    
+
     def get_month_data(self, year, month, parameters, stations, columns):
         """
         Retrieves monthly data from the SQL database for comparison of different years.
@@ -688,7 +683,7 @@ class NCEIDatabaseManager:
         """
         # connect to database
         connection, cursor = self.connect_to_db()
-        
+
         try:
             table_name = f'Climate{year}'
 
@@ -713,13 +708,13 @@ class NCEIDatabaseManager:
 
             if self.debug_messages:
                 print(command.as_string(cursor.connection))
-            
+
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
             data = pd.DataFrame(result, columns=columns)
-                
+
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
@@ -736,7 +731,7 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-                
+
             if not data.empty:
                 return data
             else:
@@ -768,7 +763,7 @@ class NCEIDatabaseManager:
         """
         # connect to database
         connection, cursor = self.connect_to_db()
-        
+
         try:
             table_name = f'Climate{year}'
 
@@ -791,14 +786,13 @@ class NCEIDatabaseManager:
 
             # if self.debug_messages:
             print(command.as_string(cursor.connection))
-            
+
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
-            
             data = pd.DataFrame(result, columns=columns)
-                
+
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
@@ -819,7 +813,7 @@ class NCEIDatabaseManager:
                 return data
             else:
                 return pd.DataFrame(columns=columns)
-            
+
     def get_data_between_dates(self, start_date, end_date, parameters, stations, columns):
         """
         Retrieves data from the SQL database for the specified date range, parameters, and stations.
@@ -846,22 +840,24 @@ class NCEIDatabaseManager:
         try:
             start_year = start_date[:4]
             end_year = end_date[:4]
-            
+
             if start_year == end_year and self.check_year(start_year):
-                data = self.get_data_between_dates_one_year(start_year, start_date, end_date, parameters, stations, columns)
-            else: 
-                years_to_process = np.arange(int(start_year), int(end_year)+1, 1)
+                data = self.get_data_between_dates_one_year(start_year, start_date, end_date, parameters, stations,
+                                                            columns)
+            else:
+                years_to_process = np.arange(int(start_year), int(end_year) + 1, 1)
 
                 filtered_years = [year for year in years_to_process if self.check_year(start_year)]
 
                 data = pd.DataFrame()
                 for year in filtered_years:
-                    new = self.get_data_between_dates_one_year(year, start_date, end_date, parameters, stations, columns)
+                    new = self.get_data_between_dates_one_year(year, start_date, end_date, parameters, stations,
+                                                               columns)
                     data = pd.concat([data, new])
 
         except Exception as error:
             print(f"Error: {error}")
-            
+
         finally:
             if not data.empty:
                 return data
@@ -895,12 +891,13 @@ class NCEIDatabaseManager:
 
             data = pd.DataFrame()
             for year in filtered_years:
-                new = self.get_data_between_dates_one_year(year, f"{year}-01-01", f"{year}-12-31", parameters, stations, columns)
+                new = self.get_data_between_dates_one_year(year, f"{year}-01-01", f"{year}-12-31", parameters, stations,
+                                                           columns)
                 data = pd.concat([data, new])
 
         except Exception as error:
             print(f"Error: {error}")
-            
+
         finally:
             if not data.empty:
                 return data

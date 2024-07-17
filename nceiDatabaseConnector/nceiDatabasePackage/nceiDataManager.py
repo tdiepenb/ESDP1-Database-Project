@@ -5,6 +5,7 @@ import numpy as np
 from decimal import Decimal
 from concurrent.futures import ThreadPoolExecutor
 
+
 class NCEIDataManager:
     def download_stations(self, file_path_dest="./data/stations/"):
         """
@@ -21,7 +22,7 @@ class NCEIDataManager:
             print(f"Already downloaded station data.")
         else:
             response = requests.get(url)
-            
+
             if response.ok:
                 print(f"Data downloaded. Will be saved as {filename} in {file_path_dest}")
                 os.makedirs(file_path_dest, exist_ok=True)
@@ -116,7 +117,7 @@ class NCEIDataManager:
         df.to_csv(f"{file_path_dest}/modified_stations.csv", index=False)
         print(f"Saved the modified stations file to {file_path_dest}/modified_stations.csv")
         return
-    
+
     def download_year(self, year, file_path):
         url = f"https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/{year}.csv.gz"
         filename = url.rsplit('/', 1)[1]
@@ -163,7 +164,7 @@ class NCEIDataManager:
                     except Exception as e:
                         print(f"An error occurred: {e}")
         return
-    
+
     def export_downloaded_year(self, year, file_path, file_path_dest, columns):
         try:
             print(f"...Year {year} processing...")
@@ -215,14 +216,14 @@ class NCEIDataManager:
         if array_of_years is None:
             array_of_years = [1994]
         columns = ["stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
-        
 
         if not multi_thread:
             for year in array_of_years:
                 self.export_downloaded_year(year, file_path, file_path_dest, columns)
         else:
             with ThreadPoolExecutor(max_workers=num_threads) as executor:
-                futures = [executor.submit(self.export_downloaded_year, year, file_path, file_path_dest, columns) for year in array_of_years]
+                futures = [executor.submit(self.export_downloaded_year, year, file_path, file_path_dest, columns) for
+                           year in array_of_years]
                 for future in futures:
                     try:
                         future.result()

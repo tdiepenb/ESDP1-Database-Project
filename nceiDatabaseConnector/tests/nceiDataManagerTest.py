@@ -38,7 +38,6 @@ class TestNCEIDataManager(unittest.TestCase):
         self.assertEqual(mock_makedirs.call_count, 2)
         self.assertEqual(mock_open.call_count, 2)
 
-
     @patch('requests.get')
     @patch('os.path.isfile')
     @patch('builtins.open', new_callable=mock_open)
