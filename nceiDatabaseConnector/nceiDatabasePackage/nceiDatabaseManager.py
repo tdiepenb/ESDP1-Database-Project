@@ -378,8 +378,14 @@ class NCEIDatabaseManager:
     ###########################################################################
 
     def is_valid_year(self, year):
+        """
+        This function checks the passed year whether it is valid. It uses the parameterized years_in_db array to check if the passed year is included. 
+
+        :param year: year as integer
+        :return:
+        """
         # TODO CHECK YEARS IN DATABASE WHEN APPLICATION IS LOADED?
-        # if(year in years_in_db):
+        # if(int(year) in years_in_db):
         #     return True
         # else:
         #     return False
@@ -387,10 +393,13 @@ class NCEIDatabaseManager:
         
     
     def is_year_in_db(self, year):
-        connection, cursor = self.connect_to_db()
+        """
+        This function checks the passed year whether there is data in the database for that year. If the table exists in the database, then it returns True, otherwise false.
 
-        if self.debug_messages:
-            print("Connection established.")
+        :param year: year as integer
+        :return:
+        """
+        connection, cursor = self.connect_to_db()
         
         try:
             table_name = f'Climate{year}'
@@ -419,6 +428,12 @@ class NCEIDatabaseManager:
                 connection.close()
 
     def check_year(self, year):
+        """
+        This function combines the both checks whether the year is in the class-defined years array and in the database.
+
+        :param year: year as integer
+        :return:
+        """
         valid = self.is_valid_year(int(year))
         in_db = self.is_year_in_db(int(year))
 
@@ -433,11 +448,188 @@ class NCEIDatabaseManager:
     ###########################################################################
     # GET DATA 
     ###########################################################################
+
+    def get_station_data_by_stationcode(self, columns, stationcode):
+        """
+        This function returns the station row of the 'Station' table with the passed stationcode.
+
+        :param columns: return columns of the station table
+        :param stationcode: The passed stationcode as string (e.g. 'AG000060390')
+        :return:
+        """
+        # connect to database
+        connection, cursor = self.connect_to_db()
+        
+        try:
+            table_name = f'Station'
+
+            # Construct the COUNT query using psycopg2.sql
+            command = sql.SQL('''
+                    SELECT {columns} 
+                    FROM {table} 
+                    WHERE id = {stationcode}               
+            ''').format(
+                columns=sql.SQL(', ').join(map(sql.Identifier, columns)),
+                table=sql.Identifier(table_name),
+                stationcode=sql.Identifier(stationcode),
+            )
+
+            if self.debug_messages:
+                print(command.as_string(cursor.connection))
+            
+            # Execute the SELECT query
+            cursor.execute(command)
+            result = cursor.fetchall()
+
+            data = pd.DataFrame(result, columns=columns)
+                
+            # Print the result specifications
+            if self.debug_messages:
+                print(f"The requested query returned {len(data)} results.")
+                if len(data) == 1:
+                    print(data)
+
+        except Exception as error:
+            print(f"Error: {error}")
+            if connection:
+                connection.rollback()
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
+            
+    def get_station_data(self, columns):
+        """
+        This function returns all rows of the 'Station' table.
+
+        :param columns: return columns of the station table
+        :return:
+        """
+        # connect to database
+        connection, cursor = self.connect_to_db()
+        
+        try:
+            table_name = f'Station'
+
+            # Construct the COUNT query using psycopg2.sql
+            command = sql.SQL('''
+                    SELECT {columns} 
+                    FROM {table}               
+            ''').format(
+                columns=sql.SQL(', ').join(map(sql.Identifier, columns)),
+                table=sql.Identifier(table_name),
+            )
+
+            if self.debug_messages:
+                print(command.as_string(cursor.connection))
+            
+            # Execute the SELECT query
+            cursor.execute(command)
+            result = cursor.fetchall()
+
+            data = pd.DataFrame(result, columns=columns)
+                
+            # Print the result specifications
+            if self.debug_messages:
+                print(f"The requested query returned {len(data)} results.")
+                if len(data) == 1:
+                    print(data)
+
+        except Exception as error:
+            print(f"Error: {error}")
+            if connection:
+                connection.rollback()
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+
+            print("Alles gucci bis her")
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
+            
+    def get_data_by_station_param(self, years, station, parameters):
+        """
+        Retrieves data from the SQL database of the passed years, the passed station and passed parameters.
+
+        :param years: years as integer array
+        :param station: stationcode of one station
+        :param parameters: parameters as string array of requested parameters
+        
+        :return: 
+        """
+        # connect to database
+        connection, cursor = self.connect_to_db()
+        
+        try:
+            data = pd.DataFrame()
+            for year in years: 
+                table_name = f'Climate{year}'
+                
+                parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
+
+                # Construct the COUNT query using psycopg2.sql
+                command = sql.SQL('''
+                        SELECT {columns} 
+                        FROM {table}
+                        WHERE stationcode IN ({stations}) AND 
+                                param IN ({parameters}) AND
+                                date_part('month', datelabel) = {month}
+                        ORDER BY datelabel                
+                ''').format(
+                    columns=sql.SQL(', ').join(map(sql.Identifier, self.weather_cols)),
+                    table=sql.Identifier(table_name),
+                    station=sql.SQL(station),
+                    parameters=sql.SQL(parameters_sql_list),
+                )
+
+                if self.debug_messages:
+                    print(command.as_string(cursor.connection))
+                
+                # Execute the SELECT query
+                cursor.execute(command)
+                result = cursor.fetchall()
+
+                result_data = pd.DataFrame(result, columns=self.weather_cols)
+
+                data = pd.concat([data, result_data])
+                
+            # Print the result specifications
+            if self.debug_messages:
+                print(f"The requested query returned {len(data)} results.")
+                if len(data) == 1:
+                    print(data)
+
+        except Exception as error:
+            print(f"Error: {error}")
+            if connection:
+                connection.rollback()
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
+    
     
     
     def get_month_data(self, year, month, parameters, stations, columns):
         """
-        Retrieves data from the SQL database.
+        Retrieves monthly data from the SQL database for comparison of different years.
 
         :return: 
         """
@@ -481,8 +673,6 @@ class NCEIDatabaseManager:
                 if len(data) == 1:
                     print(data)
 
-            return data
-
         except Exception as error:
             print(f"Error: {error}")
             if connection:
@@ -493,12 +683,17 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
+                
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
 
-    def get_data_between_dates_one_year(self, year, startdate, enddate, parameters, stations, columns):
+    def get_data_between_dates_one_year(self, year, start_date, end_date, parameters, stations, columns):
         """
         Retrieves data from the SQL database.
             
-        :param years: 
+        :param year: 
         :param columns: 
         :param condition: 
 
@@ -527,12 +722,14 @@ class NCEIDatabaseManager:
                 parameters=sql.SQL(parameters_sql_list),
             )
 
-            if self.debug_messages:
-                print(command.as_string(cursor.connection))
+            # if self.debug_messages:
+            print(command.as_string(cursor.connection))
+            
             # Execute the SELECT query
             cursor.execute(command)
             result = cursor.fetchall()
 
+            
             data = pd.DataFrame(result, columns=columns)
                 
             # Print the result specifications
@@ -540,8 +737,6 @@ class NCEIDatabaseManager:
                 print(f"The requested query returned {len(data)} results.")
                 if len(data) == 1:
                     print(data)
-
-            return data
 
         except Exception as error:
             print(f"Error: {error}")
@@ -553,36 +748,41 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-
-    def get_data_between_dates(self, startdate, enddate, parameters, stations, columns):
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
+            
+    def get_data_between_dates(self, start_date, end_date, parameters, stations, columns):
         """
         Retrieves data from the SQL database.
         
         :return: 
         """
         try:
-            start_year = startdate[:4]
-            end_year = enddate[:4]
+            start_year = start_date[:4]
+            end_year = end_date[:4]
             
             if start_year == end_year and self.check_year(start_year):
-                df = self.get_data_between_dates_one_year(start_year, startdate, enddate, parameters, stations, columns)
+                data = self.get_data_between_dates_one_year(start_year, start_date, end_date, parameters, stations, columns)
             else: 
                 years_to_process = np.arange(int(start_year), int(end_year)+1, 1)
 
                 filtered_years = [year for year in years_to_process if self.check_year(start_year)]
 
-                df = pd.DataFrame()
+                data = pd.DataFrame()
                 for year in filtered_years:
-                    new = self.get_data_between_dates_one_year(year, startdate, enddate, parameters, stations, columns)
-                    df = pd.concat([df, new])
-
-            return df
+                    new = self.get_data_between_dates_one_year(year, start_date, end_date, parameters, stations, columns)
+                    data = pd.concat([data, new])
 
         except Exception as error:
             print(f"Error: {error}")
             
         finally:
-            pass
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
 
     def get_data_yearly(self, years, parameters, stations, columns):
         """
@@ -594,15 +794,16 @@ class NCEIDatabaseManager:
 
             filtered_years = [year for year in years if self.check_year(year)]
 
-            df = pd.DataFrame()
+            data = pd.DataFrame()
             for year in filtered_years:
                 new = self.get_data_between_dates_one_year(year, f"{year}-01-01", f"{year}-12-31", parameters, stations, columns)
-                df = pd.concat([df, new])
-
-            return df
+                data = pd.concat([data, new])
 
         except Exception as error:
             print(f"Error: {error}")
             
         finally:
-            pass
+            if not data.empty:
+                return data
+            else:
+                return pd.DataFrame(columns=columns)
