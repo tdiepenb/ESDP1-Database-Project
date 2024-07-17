@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import numpy as np
 from decimal import Decimal
+from concurrent.futures import ThreadPoolExecutor
 
 
 class NCEIDataManager:
@@ -14,28 +15,38 @@ class NCEIDataManager:
         :return:
         """
         url = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt"
-        response = requests.get(url)
-        if response.ok:
-            filename = url.rsplit('/', 1)[1]
-            print(f"Data downloaded. Will be saved as {filename} in {file_path_dest}")
-            os.makedirs(file_path_dest, exist_ok=True)
-            with open(f"{file_path_dest}{filename}", "wb") as f:
-                f.write(response.content)
+
+        filename = url.rsplit('/', 1)[1]
+
+        if os.path.isfile(f"{file_path_dest}{filename}"):
+            print(f"Already downloaded station data.")
         else:
-            print("An error occurred while trying to retrieve the data from the internet.")
+            response = requests.get(url)
+
+            if response.ok:
+                print(f"Data downloaded. Will be saved as {filename} in {file_path_dest}")
+                os.makedirs(file_path_dest, exist_ok=True)
+                with open(f"{file_path_dest}{filename}", "wb") as f:
+                    f.write(response.content)
+            else:
+                print("An error occurred while trying to retrieve the data from the internet.")
 
         url = "https://www.ncei.noaa.gov/pub/data/ghcn/daily/readme.txt"
-        response = requests.get(url)
-        if response.ok:
-            filename = url.rsplit('/', 1)[1]
-            print(f"Data downloaded. Will be saved as {filename} in {file_path_dest}")
-            os.makedirs(file_path_dest, exist_ok=True)
-            with open(f"{file_path_dest}{filename}", "wb") as f:
-                f.write(response.content)
-        else:
-            print("An error occurred while trying to retrieve the data from the internet.")
+        filename = url.rsplit('/', 1)[1]
 
-        print("Data downloaded and saved in", file_path_dest)
+        if os.path.isfile(f"{file_path_dest}{filename}"):
+            print(f"Already downloaded station readme file.")
+        else:
+            response = requests.get(url)
+            if response.ok:
+                print(f"Data downloaded. Will be saved as {filename} in {file_path_dest}")
+                os.makedirs(file_path_dest, exist_ok=True)
+                with open(f"{file_path_dest}{filename}", "wb") as f:
+                    f.write(response.content)
+            else:
+                print("An error occurred while trying to retrieve the data from the internet.")
+
+        print("Data (stations and readme) downloaded and saved in", file_path_dest)
         return
 
     def convert_stations(self, file_path="./data/stations/", file_path_dest="./data/modifiedStations/"):
@@ -107,81 +118,167 @@ class NCEIDataManager:
         print(f"Saved the modified stations file to {file_path_dest}/modified_stations.csv")
         return
 
-    def download_years(self, array_of_years=None, file_path="./data/climate/script"):
+    def download_year(self, year, file_path):
+        url = f"https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/{year}.csv.gz"
+        filename = url.rsplit('/', 1)[1]
+
+        if os.path.isfile(f"{file_path}{filename}"):
+            print(f"Already downloaded data for year {year}")
+            return
+
+        print(f"...Downloading data from year {year}....")
+        response = requests.get(url)
+        if response.ok:
+            print(f"Data downloaded. Will be saved as {filename}")
+            directory_path = file_path
+            os.makedirs(directory_path, exist_ok=True)
+            with open(f"{file_path}{filename}", "wb") as f:
+                f.write(response.content)
+        else:
+            print(f"An error occurred while trying to retrieve the data for year {year}.")
+        print(f"Data from year {year} downloaded and saved.")
+
+    def download_years(self, array_of_years=None, file_path="./data/climate/script", multi_thread=False, num_threads=4):
         """
         This function downloads the specified years from the NCEI website and saves them in a csv file in the specified directory
-
+        
         :param array_of_years: an array of years to download
         :param file_path: the directory to save the csv files
-        :return:
+        :param multi_thread: boolean to enable multithreading
+        :param num_threads: number of threads to use in multithreading mode
+        :return: 
         """
 
         if array_of_years is None:
             array_of_years = [1994]
 
-        for year in array_of_years:
-            print(f"...Downloading data from year {year}....")
-            url = f"https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/{year}.csv.gz"
-            response = requests.get(url)
-            if response.ok:
-                filename = url.rsplit('/', 1)[1]
-                print(f"Data downloaded. Will be saved as {filename}")
-                directory_path = file_path
-                os.makedirs(directory_path, exist_ok=True)
-                with open(f"{file_path}{filename}", "wb") as f:
-                    f.write(response.content)
-            else:
-                print("An error occurred while trying to retrieve the data from the internet.")
-            print(f"Data from year {year} downloaded and saved.")
+        if not multi_thread:
+            for year in array_of_years:
+                self.download_year(year, file_path)
+        else:
+            with ThreadPoolExecutor(max_workers=num_threads) as executor:
+                futures = [executor.submit(self.download_year, year, file_path) for year in array_of_years]
+                for future in futures:
+                    try:
+                        future.result()
+                    except Exception as e:
+                        print(f"An error occurred: {e}")
         return
 
-    def export_downloaded_years(self, array_of_years=None, params_to_keep=None,
-                                file_path='./data/NCEI/ghcn/daily/',
-                                file_path_dest="./data/NCEI/modified/daily/"):
+    def export_downloaded_year(self, year, file_path, file_path_dest, columns):
+        try:
+            print(f"...Year {year} processing...")
+            if os.path.isfile(f"{file_path_dest}/modified_{year}.csv"):
+                print(f"Already exported data for year {year}.")
+                return
+
+            print(f"Loading data from year {year}")
+            file_path_source = f"{file_path}{year}.csv.gz"
+            df = pd.read_csv(file_path_source, names=columns, compression="gzip")
+            print(f"Data from year {year} loaded.")
+
+            # Convert time to int
+            df['time'] = df['time'].fillna(1200)
+            df['time'] = df['time'].apply(lambda x: int(Decimal(x)))
+            # Convert values to float
+            df = df.astype({"value": "float32"})
+
+            # Cleanse dataset: keep only the parameters of interest, i.e. TMIN, TMAX, PRCP, SNOW
+            keep = ["TMIN", "TMAX", "PRCP", "SNOW"]
+            df = df[df["param"].isin(keep)]
+
+            scaling_factors = {"TMIN": 0.1, "TMAX": 0.1, "PRCP": 0.1}
+
+            for k, v in scaling_factors.items():
+                df.loc[df["param"] == k, "value"] *= v
+
+            df = df.fillna('')
+
+            os.makedirs(file_path_dest, exist_ok=True)
+            df.to_csv(f"{file_path_dest}/modified_{year}.csv", index=True, header=False)
+            print(f"Export of year {year} finished.")
+
+        except Exception as error:
+            print(f"Error: {error}")
+
+    def export_downloaded_years(self, array_of_years=None, file_path='./data/NCEI/ghcn/daily/',
+                                file_path_dest="./data/NCEI/modified/daily/", multi_thread=False, num_threads=4):
         """
         This imports the specified years from the specified source path modifies it and exports them as a csv file in the specified destination directory
-
+        
         :param array_of_years: the years to load and modify
-        :param params_to_keep: the list of parameters to keep
         :param file_path: the directory where the source csv.gz files can be found
         :param file_path_dest: the directory where the modified csv files should be saved
-        :return:
+        :param multi_thread: boolean to enable multithreading
+        :param num_threads: number of threads to use in multithreading mode
+        :return: 
         """
-
-        if params_to_keep is None:
-            params_to_keep = ["TMIN", "TMAX", "PRCP", "SNOW"]
         if array_of_years is None:
             array_of_years = [1994]
-
         columns = ["stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
 
-        for year in array_of_years:
-            print(f"...Year {year} processing...")
-            try:
-                print(f"Loading data from year {year}")
-                file_path_source = f"{file_path}{year}.csv.gz"
-                df = pd.read_csv(file_path_source, names=columns, compression="gzip")
-                print(f"Data from year {year} loaded.")
+        if not multi_thread:
+            for year in array_of_years:
+                self.export_downloaded_year(year, file_path, file_path_dest, columns)
+        else:
+            with ThreadPoolExecutor(max_workers=num_threads) as executor:
+                futures = [executor.submit(self.export_downloaded_year, year, file_path, file_path_dest, columns) for
+                           year in array_of_years]
+                for future in futures:
+                    try:
+                        future.result()
+                    except Exception as e:
+                        print(f"An error occurred: {e}")
 
-                # Convert time to int
-                df['time'] = df['time'].fillna(1200)
-                df['time'] = df['time'].apply(lambda x: int(Decimal(x)))
-                # Convert values to float
-                df = df.astype({"value": "float32"})
-
-                # Cleanse dataset: keep only the parameters of interest, i.e. TMIN, TMAX, PRCP, SNOW
-                df = df[df["param"].isin(params_to_keep)]
-
-                scaling_factors = {"TMIN": 0.1, "TMAX": 0.1, "PRCP": 0.1}
-
-                for k, v in scaling_factors.items():
-                    df.loc[df["param"] == k, "value"] *= v
-
-                df = df.fillna('')
-
-                os.makedirs(file_path_dest, exist_ok=True)
-                df.to_csv(f"{file_path_dest}/modified_{year}.csv", index=True, header=False)
-                print(f"Export of year {year} finished.")
-            except Exception as error:
-                print(f"Error: {error}")
         return
+
+    # def export_downloaded_years(self, array_of_years=None, params_to_keep=None,
+    #                             file_path='./data/NCEI/ghcn/daily/',
+    #                             file_path_dest="./data/NCEI/modified/daily/"):
+    #     """
+    #     This imports the specified years from the specified source path modifies it and exports them as a csv file in the specified destination directory
+
+    #     :param array_of_years: the years to load and modify
+    #     :param params_to_keep: the list of parameters to keep
+    #     :param file_path: the directory where the source csv.gz files can be found
+    #     :param file_path_dest: the directory where the modified csv files should be saved
+    #     :return:
+    #     """
+
+    #     if params_to_keep is None:
+    #         params_to_keep = ["TMIN", "TMAX", "PRCP", "SNOW"]
+    #     if array_of_years is None:
+    #         array_of_years = [1994]
+
+    #     columns = ["stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
+
+    #     for year in array_of_years:
+    #         print(f"...Year {year} processing...")
+    #         try:
+    #             print(f"Loading data from year {year}")
+    #             file_path_source = f"{file_path}{year}.csv.gz"
+    #             df = pd.read_csv(file_path_source, names=columns, compression="gzip")
+    #             print(f"Data from year {year} loaded.")
+
+    #             # Convert time to int
+    #             df['time'] = df['time'].fillna(1200)
+    #             df['time'] = df['time'].apply(lambda x: int(Decimal(x)))
+    #             # Convert values to float
+    #             df = df.astype({"value": "float32"})
+
+    #             # Cleanse dataset: keep only the parameters of interest, i.e. TMIN, TMAX, PRCP, SNOW
+    #             df = df[df["param"].isin(params_to_keep)]
+
+    #             scaling_factors = {"TMIN": 0.1, "TMAX": 0.1, "PRCP": 0.1}
+
+    #             for k, v in scaling_factors.items():
+    #                 df.loc[df["param"] == k, "value"] *= v
+
+    #             df = df.fillna('')
+
+    #             os.makedirs(file_path_dest, exist_ok=True)
+    #             df.to_csv(f"{file_path_dest}/modified_{year}.csv", index=True, header=False)
+    #             print(f"Export of year {year} finished.")
+    #         except Exception as error:
+    #             print(f"Error: {error}")
+    #     return
