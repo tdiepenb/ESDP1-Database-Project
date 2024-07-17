@@ -9,7 +9,7 @@ import pandas as pd
 class NCEIDatabaseManager:
     def __init__(self, db_name="mydatabase", db_user="myuser", db_password="mypassword", db_host="localhost",
                  db_port="5432",
-                 weather_cols=None, station_cols=None, debug_messages=False):
+                 weather_cols=None, station_cols=None, debug_messages = False, years_in_db = None):
 
         if weather_cols is None:
             weather_cols = ["id", "stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
@@ -25,6 +25,7 @@ class NCEIDatabaseManager:
         self.weather_cols = weather_cols
         self.station_cols = station_cols
         self.debug_messages = debug_messages
+        self.years_in_db = years_in_db
 
         # self.create_stations_table()
 
@@ -389,7 +390,8 @@ class NCEIDatabaseManager:
         # else:
         #     return False
         return True
-
+        
+    
     def is_year_in_db(self, year):
         """
         Checks if there is data in the database for the specified year.
@@ -636,7 +638,7 @@ class NCEIDatabaseManager:
                 result_data = pd.DataFrame(result, columns=self.weather_cols)
 
                 data = pd.concat([data, result_data])
-
+                
             # Print the result specifications
             if self.debug_messages:
                 print(f"The requested query returned {len(data)} results.")
