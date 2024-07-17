@@ -379,10 +379,10 @@ class NCEIDatabaseManager:
 
     def is_valid_year(self, year):
         """
-        This function checks the passed year whether it is valid. It uses the parameterized years_in_db array to check if the passed year is included. 
+        Checks if the passed year is valid based on a predefined set of valid years.
 
-        :param year: year as integer
-        :return:
+        :param year: The year to check as an integer.
+        :return: True if the year is valid; False otherwise.
         """
         # TODO CHECK YEARS IN DATABASE WHEN APPLICATION IS LOADED?
         # if(int(year) in years_in_db):
@@ -394,10 +394,10 @@ class NCEIDatabaseManager:
     
     def is_year_in_db(self, year):
         """
-        This function checks the passed year whether there is data in the database for that year. If the table exists in the database, then it returns True, otherwise false.
+        Checks if there is data in the database for the specified year.
 
-        :param year: year as integer
-        :return:
+        :param year: The year to check as an integer.
+        :return: True if there is data in the database for the year; False otherwise.
         """
         connection, cursor = self.connect_to_db()
         
@@ -429,10 +429,11 @@ class NCEIDatabaseManager:
 
     def check_year(self, year):
         """
-        This function combines the both checks whether the year is in the class-defined years array and in the database.
+        Combines checks to validate whether the year is both in the predefined valid years list
+        and has data in the database.
 
-        :param year: year as integer
-        :return:
+        :param year: The year to check as an integer.
+        :return: True if the year is valid and data exists in the database; False otherwise.
         """
         valid = self.is_valid_year(int(year))
         in_db = self.is_year_in_db(int(year))
@@ -451,11 +452,23 @@ class NCEIDatabaseManager:
 
     def get_station_data_by_stationcode(self, columns, stationcode):
         """
-        This function returns the station row of the 'Station' table with the passed stationcode.
+        Retrieves the station row from the 'Station' table with the specified stationcode.
 
-        :param columns: return columns of the station table
-        :param stationcode: The passed stationcode as string (e.g. 'AG000060390')
-        :return:
+        This function connects to the database, constructs and executes a query to retrieve 
+        the row from the 'Station' table where the stationcode matches the provided stationcode. 
+        The results are returned as a pandas DataFrame.
+
+        Parameters:
+        - columns: List of column names to retrieve from the 'Station' table.
+        - stationcode: The stationcode of the station to retrieve data for (e.g., 'AG000060390').
+
+        Returns:
+        - A pandas DataFrame containing the row from the 'Station' table with the specified stationcode 
+        and columns. If no data is found or an error occurs, an empty DataFrame with the specified 
+        columns is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         # connect to database
         connection, cursor = self.connect_to_db()
@@ -506,10 +519,22 @@ class NCEIDatabaseManager:
             
     def get_station_data(self, columns):
         """
-        This function returns all rows of the 'Station' table.
+        Retrieves all rows from the 'Station' table.
 
-        :param columns: return columns of the station table
-        :return:
+        This function connects to the database, constructs and executes a query to retrieve 
+        all columns for all rows from the 'Station' table. The results are returned as a 
+        pandas DataFrame.
+
+        Parameters:
+        - columns: List of column names to retrieve from the 'Station' table.
+
+        Returns:
+        - A pandas DataFrame containing all rows from the 'Station' table with the specified columns.
+        If no data is found or an error occurs, an empty DataFrame with the specified columns 
+        is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         # connect to database
         connection, cursor = self.connect_to_db()
@@ -560,13 +585,24 @@ class NCEIDatabaseManager:
             
     def get_data_by_station_param(self, years, station, parameters):
         """
-        Retrieves data from the SQL database of the passed years, the passed station and passed parameters.
+        Retrieves data from the SQL database for the specified years, station, and parameters.
 
-        :param years: years as integer array
-        :param station: stationcode of one station
-        :param parameters: parameters as string array of requested parameters
-        
-        :return: 
+        This function connects to the database, constructs and executes a query to retrieve 
+        data for each year in the provided list of years, filtered by the specified station 
+        and parameters. The results are concatenated into a single pandas DataFrame.
+
+        Parameters:
+        - years: List of years (as integers) to retrieve data for.
+        - station: Station code of the station to retrieve data for.
+        - parameters: List of parameter names to include in the query.
+
+        Returns:
+        - A pandas DataFrame containing the concatenated data for the specified years, station, 
+        and parameters. If no data is found or an error occurs, an empty DataFrame with the 
+        columns specified by self.weather_cols is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         # connect to database
         connection, cursor = self.connect_to_db()
@@ -623,7 +659,7 @@ class NCEIDatabaseManager:
             if not data.empty:
                 return data
             else:
-                return pd.DataFrame(columns=columns)
+                return pd.DataFrame(columns=self.weather_cols)
     
     
     
@@ -631,7 +667,24 @@ class NCEIDatabaseManager:
         """
         Retrieves monthly data from the SQL database for comparison of different years.
 
-        :return: 
+        This function connects to the database, constructs and executes a query to retrieve 
+        data for the specified month of the given year, filtered by the specified parameters 
+        and stations. The results are returned as a pandas DataFrame.
+
+        Parameters:
+        - year: The year to retrieve data for. Should be a string or an integer.
+        - month: The month to retrieve data for. Should be an integer (1-12).
+        - parameters: List of parameters to include in the query. Each parameter should be a string.
+        - stations: List of station codes to include in the query. Each station code should be a string.
+        - columns: List of column names for the resulting DataFrame. Each column name should be a string.
+
+        Returns:
+        - A pandas DataFrame containing the data retrieved for the specified month, year, parameters, 
+        and stations. If no data is found or an error occurs, an empty DataFrame with the specified 
+        columns is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         # connect to database
         connection, cursor = self.connect_to_db()
@@ -691,13 +744,27 @@ class NCEIDatabaseManager:
 
     def get_data_between_dates_one_year(self, year, start_date, end_date, parameters, stations, columns):
         """
-        Retrieves data from the SQL database.
-            
-        :param year: 
-        :param columns: 
-        :param condition: 
+        Retrieves data from the SQL database for the specified year, date range, parameters, and stations.
 
-        :return: 
+        This function connects to the database, constructs and executes a query to retrieve data for the
+        given year and date range, filtered by the specified parameters and stations. The results are 
+        returned as a pandas DataFrame.
+
+        Parameters:
+        - year: The year to retrieve data for. Should be a string or an integer.
+        - start_date: The start date for the data retrieval in the format 'YYYY-MM-DD'.
+        - end_date: The end date for the data retrieval in the format 'YYYY-MM-DD'.
+        - parameters: List of parameters to include in the query. Each parameter should be a string.
+        - stations: List of station codes to include in the query. Each station code should be a string.
+        - columns: List of column names for the resulting DataFrame. Each column name should be a string.
+
+        Returns:
+        - A pandas DataFrame containing the data retrieved for the specified year, date range, 
+        parameters, and stations. If no data is found or an error occurs, an empty DataFrame 
+        with the specified columns is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         # connect to database
         connection, cursor = self.connect_to_db()
@@ -755,9 +822,26 @@ class NCEIDatabaseManager:
             
     def get_data_between_dates(self, start_date, end_date, parameters, stations, columns):
         """
-        Retrieves data from the SQL database.
-        
-        :return: 
+        Retrieves data from the SQL database for the specified date range, parameters, and stations.
+
+        This function handles both single-year and multi-year date ranges. It filters the years 
+        to ensure they exist in the database and then retrieves data for each valid year within 
+        the specified date range. The data is concatenated into a single pandas DataFrame.
+
+        Parameters:
+        - start_date: The start date for the data retrieval in the format 'YYYY-MM-DD'.
+        - end_date: The end date for the data retrieval in the format 'YYYY-MM-DD'.
+        - parameters: List of parameters to include in the query. Each parameter should be a string.
+        - stations: List of station codes to include in the query. Each station code should be a string.
+        - columns: List of column names for the resulting DataFrame. Each column name should be a string.
+
+        Returns:
+        - A pandas DataFrame containing the concatenated data for the specified date range, 
+        parameters, and stations. If no data is found or an error occurs, an empty DataFrame 
+        with the specified columns is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         try:
             start_year = start_date[:4]
@@ -786,9 +870,24 @@ class NCEIDatabaseManager:
 
     def get_data_yearly(self, years, parameters, stations, columns):
         """
-        Retrieves data from the SQL database.
-        
-        :return: 
+        Retrieves data from the SQL database for the specified years, parameters, and stations.
+
+        This function filters the provided years to ensure they exist in the database and then 
+        retrieves data for the entire year for each valid year. The data is concatenated into 
+        a single pandas DataFrame.
+
+        Parameters:
+        - years: List of years to retrieve data for. Each year should be a string or an integer.
+        - parameters: List of parameters to include in the query. Each parameter should be a string.
+        - stations: List of station codes to include in the query. Each station code should be a string.
+        - columns: List of column names for the resulting DataFrame. Each column name should be a string.
+
+        Returns:
+        - A pandas DataFrame containing the concatenated data for all valid years, parameters, and stations.
+        If no data is found or an error occurs, an empty DataFrame with the specified columns is returned.
+
+        Raises:
+        - Exception: If an error occurs during data retrieval, it will be printed and handled gracefully.
         """
         try:
 

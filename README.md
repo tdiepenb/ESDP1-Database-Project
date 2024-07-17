@@ -1,33 +1,103 @@
 # ESDP1-Database-Project
 
-# Project description
+## Project Overview
 
-# Task definition
+This project aims to transform daily climate summaries into a fully operational database system using PostgreSQL. It includes functionalities for downloading data, ingesting it into the database, managing station information, performing data analysis, and optionally, creating a web service for data visualization.
 
-# Implementation details
+## Project Goals
 
-## Modules
+1. **Data Acquisition and Ingestion:** [✔]
 
-1. nceiDatabaseManager
-2. nceiDataManager
+   - Download daily climate summaries for at least 10 years and load them into a PostgreSQL database.
+   - Automate data download and ingestion processes.
 
-### nceiDatabaseManager
+2. **Database Structure:** [✔]
 
-### nceiDataManager
+   - Define the database schema to store climate data and station metadata efficiently.
 
-Rename .env-example to .env if you want to use it :))
+3. **Functionality:** [✔]
 
-To Run the database cd into the nceiDatabase folder using `cd ./nceiDatabase`
+   - Develop Python functions to query the database based on user-specified station and parameters.
+   - Implement basic data analysis capabilities such as plotting graphs based on user inputs.
 
-Then run `docker-compose up` and if it is the first time starting the database add the `--build` flag to the end of the
-command.
+4. **Optional Web Service:** [✖]
+   - Create a web-based frontend to interact with the database, allowing users to select stations and parameters and visualize data.
 
-## How to check the databases
+## Implementation Details
 
-<code>docker exec -it esdp1-database-project-db-1 bash</code>
-<code>psql -U ESDP -d NCEIDatabase -h localhost</code>
-<code>SELECT COUNT(\*) FROM Climate1952;</code>
-<code>SELECT COUNT(\*) AS count, stationcode FROM "Climate1950" WHERE stationcode LIKE '%GME%' GROUP BY stationcode ORDER BY count DESC;</code>
-<code>SELECT COUNT(\*) AS count, stationcode FROM "Climate2010" WHERE stationcode LIKE '%GME%' GROUP BY stationcode ORDER BY count DESC;</code>
-<code>SELECT \* FROM "Station" WHERE elevation > -999 ORDER BY elevation ASC LIMIT 10;</code>
-<code>SELECT \* FROM "Station" WHERE elevation > -999 ORDER BY elevation DESC LIMIT 10;</code>
+### Docker Setup
+
+- Utilize Docker for setting up the PostgreSQL database.
+- Advantages of Docker include easy deployment, isolation of dependencies, and scalability.
+
+### Project Modules
+
+#### nceiDatabaseManager
+
+- **Description:** Contains functions to manage interactions with the PostgreSQL database.
+- **Features:**
+  - Modular execution of database operations.
+  - Database connection handling and query execution.
+
+#### nceiDataManager
+
+- **Description:** Handles data management tasks such as downloading, filtering, and exporting climate data.
+- **Features:**
+  - Automated data download with requests api.
+  - Data filtering based on predefined criteria.
+
+## Database Operations
+
+### Checking Database Status
+
+To interact with the PostgreSQL database using Docker:
+
+1. Access the Docker container:
+   ```bash
+   docker exec -it esdp1-database-project-db-1 bash
+   ```
+2. Connect to database
+   ```bash
+   psql -U ESDP -d NCEIDatabase -h localhost
+   ```
+3. List all tables
+   ```bash
+   \dt
+   ```
+4. Check Climate table if it has values
+   ```bash
+   SELECT COUNT(*) AS count, stationcode
+   FROM "Climate1952" ORDER BY count;
+   ```
+5. Check which stations has the most values
+   ```bash
+   SELECT COUNT(*) AS count, stationcode
+   FROM "Climate1952"
+   GROUP BY stationcode
+   ORDER BY count
+   DESC LIMIT 10;
+   ```
+6. Check which stations has lowest elevation
+   ```bash
+   SELECT * FROM "Station"
+   WHERE elevation > -999
+   ORDER BY elevation ASC
+   LIMIT 10;
+   ```
+7. Check which stations has highest elevation
+   ```bash
+   SELECT * FROM "Station"
+   WHERE elevation > -999
+   ORDER BY elevation DESC
+   LIMIT 10;
+   ```
+8. Check which stations has highest elevation
+   ```bash
+   SELECT COUNT(*) AS count, stationcode
+   FROM "Climate1955" c
+   LEFT JOIN "Station" s ON s.id = c.stationcode
+   WHERE latitude < 0
+   GROUP BY stationcode
+   ORDER BY count DESC
+   LIMIT 10;
+   ```
