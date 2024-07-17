@@ -3,12 +3,13 @@ from psycopg2 import sql
 from concurrent.futures import ThreadPoolExecutor
 import os
 import numpy as np
+import pandas as pd
 
 
 class NCEIDatabaseManager:
     def __init__(self, db_name="mydatabase", db_user="myuser", db_password="mypassword", db_host="localhost",
                  db_port="5432",
-                 weather_cols=None, station_cols=None):
+                 weather_cols=None, station_cols=None, debug_messages = False):
 
         if weather_cols is None:
             weather_cols = ["id", "stationcode", "datelabel", "param", "value", "mflag", "qflag", "sflag", "time"]
@@ -23,8 +24,9 @@ class NCEIDatabaseManager:
         self.db_port = db_port
         self.weather_cols = weather_cols
         self.station_cols = station_cols
+        self.debug_messages = debug_messages
 
-        self.create_stations_table()
+        # self.create_stations_table()
 
     def connect_to_db(self):
         """
@@ -41,7 +43,8 @@ class NCEIDatabaseManager:
                 port=self.db_port
             )
             cursor = connection.cursor()
-            print(f"Connected to database {self.db_name} with user {self.db_user}")
+            if self.debug_messages:
+                print(f"Connected to database {self.db_name} with user {self.db_user}")
             return connection, cursor
         except Exception as error:
             print(f"Error: {error}")
@@ -76,7 +79,8 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-            print(f"Disconnected")
+            if self.debug_messages:
+                print(f"Disconnected")
 
     def create_stations_table(self):
         """
@@ -135,7 +139,8 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-            print(f"Disconnected")
+            if self.debug_messages:
+                print(f"Disconnected")
 
     def create_climate_table(self, year):
         """
@@ -178,9 +183,22 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-            print(f"Disconnected")
+            if self.debug_messages:
+                print(f"Disconnected")
 
         return table_name
+    
+    def create_climate_tables(self, years=None):
+        """
+        This creates a table for the specified year with the name Climate{year}
+
+        :param year: the year for which to create the table
+        :return:
+        """
+        for year in years: 
+            self.create_climate_table(year)
+            
+        return True
 
     def drop_table(self, table_name):
         """
@@ -205,7 +223,8 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-            print(f"Disconnected")
+            if self.debug_messages:
+                print(f"Disconnected")
 
     def count_rows(self, table_name):
         """
@@ -232,7 +251,9 @@ class NCEIDatabaseManager:
                 cursor.close()
             if connection:
                 connection.close()
-            print(f"Disconnected")
+            if self.debug_messages:
+                print(f"Disconnected")
+        return row_count
 
     def split_csv_file(self, file_path, num_chunks):
         """
@@ -298,6 +319,10 @@ class NCEIDatabaseManager:
         if table_name is None:
             print(f"Error: table_name must be provided")
             return
+        
+        if self.count_rows(table_name=table_name) > 1:
+            print(f"Data in table {table_name} already exists. Please check or delete the database before continuing.")
+            return
 
         # this splits the file into equal sized chunks. That way one thread shouldn't finish that much earlier
         # than another, and we use resources efficiently
@@ -309,6 +334,7 @@ class NCEIDatabaseManager:
             print(f'Thread started for chunk: {chunk_file}')
             try:
                 connection, cursor = self.connect_to_db()
+
                 copy_command = sql.SQL("""
                     COPY {table} ({columns}) FROM STDIN WITH CSV HEADER
                 """).format(
@@ -345,3 +371,238 @@ class NCEIDatabaseManager:
         print(f"Multi-threaded insert completed for {table_name}.")
 
         return
+    
+
+    ###########################################################################
+    # DATA CHECK 
+    ###########################################################################
+
+    def is_valid_year(self, year):
+        # TODO CHECK YEARS IN DATABASE WHEN APPLICATION IS LOADED?
+        # if(year in years_in_db):
+        #     return True
+        # else:
+        #     return False
+        return True
+        
+    
+    def is_year_in_db(self, year):
+        connection, cursor = self.connect_to_db()
+
+        if self.debug_messages:
+            print("Connection established.")
+        
+        try:
+            table_name = f'Climate{year}'
+
+            # Construct the COUNT query using psycopg2.sql
+            command = sql.SQL('''
+                    SELECT COUNT(*)
+                    FROM {table}   
+            ''').format(
+                table=sql.Identifier(table_name),
+            )
+            
+            # Execute the SELECT query
+            cursor.execute(command)
+            result = cursor.fetchall()
+
+            return len(result)>0
+
+        except Exception as error:
+            return False
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+
+    def check_year(self, year):
+        valid = self.is_valid_year(int(year))
+        in_db = self.is_year_in_db(int(year))
+
+        if valid and in_db:
+            return True
+        else:
+            if self.debug_messages:
+                print(f"Year {year} not in db and/or is not valid.")
+            return False
+
+
+    ###########################################################################
+    # GET DATA 
+    ###########################################################################
+    
+    
+    def get_month_data(self, year, month, parameters, stations, columns):
+        """
+        Retrieves data from the SQL database.
+
+        :return: 
+        """
+        # connect to database
+        connection, cursor = self.connect_to_db()
+        
+        try:
+            table_name = f'Climate{year}'
+
+            stations_sql_list = ",".join([f"'{station}'" for station in stations])
+            parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
+
+            # Construct the COUNT query using psycopg2.sql
+            command = sql.SQL('''
+                    SELECT {columns} 
+                    FROM {table}
+                    WHERE stationcode IN ({stations}) AND 
+                            param IN ({parameters}) AND
+                            date_part('month', datelabel) = {month}
+                    ORDER BY datelabel                
+            ''').format(
+                columns=sql.SQL(', ').join(map(sql.Identifier, columns)),
+                table=sql.Identifier(table_name),
+                stations=sql.SQL(stations_sql_list),
+                parameters=sql.SQL(parameters_sql_list),
+                month=sql.SQL(str(month))
+            )
+
+            if self.debug_messages:
+                print(command.as_string(cursor.connection))
+            
+            # Execute the SELECT query
+            cursor.execute(command)
+            result = cursor.fetchall()
+
+            data = pd.DataFrame(result, columns=columns)
+                
+            # Print the result specifications
+            if self.debug_messages:
+                print(f"The requested query returned {len(data)} results.")
+                if len(data) == 1:
+                    print(data)
+
+            return data
+
+        except Exception as error:
+            print(f"Error: {error}")
+            if connection:
+                connection.rollback()
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+
+    def get_data_between_dates_one_year(self, year, startdate, enddate, parameters, stations, columns):
+        """
+        Retrieves data from the SQL database.
+            
+        :param years: 
+        :param columns: 
+        :param condition: 
+
+        :return: 
+        """
+        # connect to database
+        connection, cursor = self.connect_to_db()
+        
+        try:
+            table_name = f'Climate{year}'
+
+            stations_sql_list = ",".join([f"'{station}'" for station in stations])
+            parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
+
+            # Construct the COUNT query using psycopg2.sql
+            command = sql.SQL('''
+                    SELECT {columns} 
+                    FROM {table}
+                    WHERE stationcode IN ({stations}) AND 
+                            param IN ({parameters})
+                    ORDER BY datelabel                
+            ''').format(
+                columns=sql.SQL(', ').join(map(sql.Identifier, columns)),
+                table=sql.Identifier(table_name),
+                stations=sql.SQL(stations_sql_list),
+                parameters=sql.SQL(parameters_sql_list),
+            )
+
+            if self.debug_messages:
+                print(command.as_string(cursor.connection))
+            # Execute the SELECT query
+            cursor.execute(command)
+            result = cursor.fetchall()
+
+            data = pd.DataFrame(result, columns=columns)
+                
+            # Print the result specifications
+            if self.debug_messages:
+                print(f"The requested query returned {len(data)} results.")
+                if len(data) == 1:
+                    print(data)
+
+            return data
+
+        except Exception as error:
+            print(f"Error: {error}")
+            if connection:
+                connection.rollback()
+
+        finally:
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()
+
+    def get_data_between_dates(self, startdate, enddate, parameters, stations, columns):
+        """
+        Retrieves data from the SQL database.
+        
+        :return: 
+        """
+        try:
+            start_year = startdate[:4]
+            end_year = enddate[:4]
+            
+            if start_year == end_year and self.check_year(start_year):
+                df = self.get_data_between_dates_one_year(start_year, startdate, enddate, parameters, stations, columns)
+            else: 
+                years_to_process = np.arange(int(start_year), int(end_year)+1, 1)
+
+                filtered_years = [year for year in years_to_process if self.check_year(start_year)]
+
+                df = pd.DataFrame()
+                for year in filtered_years:
+                    new = self.get_data_between_dates_one_year(year, startdate, enddate, parameters, stations, columns)
+                    df = pd.concat([df, new])
+
+            return df
+
+        except Exception as error:
+            print(f"Error: {error}")
+            
+        finally:
+            pass
+
+    def get_data_yearly(self, years, parameters, stations, columns):
+        """
+        Retrieves data from the SQL database.
+        
+        :return: 
+        """
+        try:
+
+            filtered_years = [year for year in years if self.check_year(year)]
+
+            df = pd.DataFrame()
+            for year in filtered_years:
+                new = self.get_data_between_dates_one_year(year, f"{year}-01-01", f"{year}-12-31", parameters, stations, columns)
+                df = pd.concat([df, new])
+
+            return df
+
+        except Exception as error:
+            print(f"Error: {error}")
+            
+        finally:
+            pass
