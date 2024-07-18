@@ -119,6 +119,12 @@ class NCEIDataManager:
         return
 
     def download_year(self, year, file_path):
+        """
+        Downloads the specified year from thee ncei ghcn database
+
+        :param year: The year to download
+        :param file_path: The file path where the data should be downloaded to
+        """
         url = f"https://www.ncei.noaa.gov/pub/data/ghcn/daily/by_year/{year}.csv.gz"
         filename = url.rsplit('/', 1)[1]
 
@@ -166,6 +172,15 @@ class NCEIDataManager:
         return
 
     def export_downloaded_year(self, year, file_path, file_path_dest, columns):
+        """
+        Preprocesses the specified year file in the file_path directory and saves it as a modivied_year.csv file in the
+        file_path_dest directory.
+
+        :param year: The year to preprocess and save
+        :param file_path: The directory where the original csv file is
+        :param file_path_dest: The directory where the modified csv file should be saved
+        :param columns: The list of columns in the file
+        """
         try:
             print(f"...Year {year} processing...")
             if os.path.isfile(f"{file_path_dest}/modified_{year}.csv"):

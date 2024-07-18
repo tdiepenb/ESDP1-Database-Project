@@ -51,6 +51,14 @@ class NCEIDatabaseManager:
             print(f"Error: {error}")
 
     def insert_copy(self, file_path="", table_name="", columns=None):
+        """
+        This inserts a specified file into the specified table
+
+        :param file_path: path to the file to be inserted
+        :param table_name: name of the table to be inserted
+        :param columns: list of columns in the file
+        :return:
+        """
         if columns is None:
             columns = []
 
@@ -610,7 +618,7 @@ class NCEIDatabaseManager:
                 table_name = f'Climate{year}'
 
                 if not self.check_year(year):
-                    raise Exception("Year is not valid") 
+                    raise Exception("Year is not valid")
 
                 parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
 
@@ -694,9 +702,9 @@ class NCEIDatabaseManager:
             parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
 
             if not self.check_year(year):
-                raise Exception("Year is not valid") 
+                raise Exception("Year is not valid")
 
-            # Construct the COUNT query using psycopg2.sql
+                # Construct the COUNT query using psycopg2.sql
             command = sql.SQL('''
                     SELECT {columns} 
                     FROM {table}
@@ -774,7 +782,7 @@ class NCEIDatabaseManager:
             table_name = f'Climate{year}'
 
             if not self.check_year(year):
-                raise Exception("Year is not valid") 
+                raise Exception("Year is not valid")
 
             stations_sql_list = ",".join([f"'{station}'" for station in stations])
             parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
