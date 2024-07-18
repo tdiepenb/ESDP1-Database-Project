@@ -609,6 +609,9 @@ class NCEIDatabaseManager:
             for year in years:
                 table_name = f'Climate{year}'
 
+                if not self.check_year(year):
+                    raise Exception("Year is not valid") 
+
                 parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
 
                 # Construct the COUNT query using psycopg2.sql
@@ -690,6 +693,9 @@ class NCEIDatabaseManager:
             stations_sql_list = ",".join([f"'{station}'" for station in stations])
             parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
 
+            if not self.check_year(year):
+                raise Exception("Year is not valid") 
+
             # Construct the COUNT query using psycopg2.sql
             command = sql.SQL('''
                     SELECT {columns} 
@@ -766,6 +772,9 @@ class NCEIDatabaseManager:
 
         try:
             table_name = f'Climate{year}'
+
+            if not self.check_year(year):
+                raise Exception("Year is not valid") 
 
             stations_sql_list = ",".join([f"'{station}'" for station in stations])
             parameters_sql_list = ",".join([f"'{parameter}'" for parameter in parameters])
