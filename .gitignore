@@ -1,12 +1,17 @@
 /data/export/weather/*.csv
 /data/export/*.csv
-/data/export/*.csv
+
+
 
 /data/weather/*.csv
 /data/weather/*.csv.gz
 /data/weather/*.txt
 /data/*.txt
 /data
+
+__pycache__/
+*.py[cod]
+
 
 .venv
 
