@@ -2,7 +2,7 @@
 
 ## Basic information
 - Team: Tilmann Diepenbruck, Fabian Klug
-- University project for Earth systems data processing
+- University project for "Fundamentals of Earth system data processing"
 - Student project for University of Cologne
 
 ## Project Overview
