@@ -1,5 +1,10 @@
 # ESDP1-Database-Project
 
+## Basic information
+- Team: Tilmann Diepenbruck, Fabian Klug
+- University project for Earth systems data processing
+- Student project for University of Cologne
+
 ## Project Overview
 
 This project aims to transform daily climate summaries into a fully operational database system using PostgreSQL. It
