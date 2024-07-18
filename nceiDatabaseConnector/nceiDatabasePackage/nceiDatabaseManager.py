@@ -384,12 +384,11 @@ class NCEIDatabaseManager:
         :param year: The year to check as an integer.
         :return: True if the year is valid; False otherwise.
         """
-        # TODO CHECK YEARS IN DATABASE WHEN APPLICATION IS LOADED?
-        # if(int(year) in years_in_db):
-        #     return True
-        # else:
-        #     return False
-        return True
+        if int(year) in self.years_in_db:
+            return True
+        else:
+            return False
+        # return True
 
     def is_year_in_db(self, year):
         """
