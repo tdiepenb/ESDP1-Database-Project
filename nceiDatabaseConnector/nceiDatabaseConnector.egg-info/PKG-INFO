@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: nceiDatabaseConnector
+Version: 0.1.0
+Summary: A package that allows downloading and modifying GHCN-Daily Data from the NCEI Database
+Home-page: https://github.com/tdiepenb/ESDP1-Database-Project
+Author: Fabian Klug, Tilmann Diepenbruck
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: pandas
+Requires-Dist: requests
+Requires-Dist: psycopg2-binary
+Requires-Dist: psycopg2

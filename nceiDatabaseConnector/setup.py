@@ -20,5 +20,6 @@ setup(
         "pandas",
         "requests",
         "psycopg2-binary",
+        "psycopg2",
     ],
 )

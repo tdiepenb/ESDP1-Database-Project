@@ -2,3 +2,4 @@ numpy==2.0.0
 pandas==2.2.2
 requests==2.32.3
 psycopg2-binary==2.9.9
+psycopg2==2.9.9
